@@ -1,0 +1,102 @@
+---
+title: "Untitled"
+date: "MM/DD/YYYY"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+knit: (function(i, encoding) {apstyle::render(i, encoding)})
+---
+<!-- Timestamp: leave this in to automatically track when a file is rendered -->
+*Rendered at `r format(Sys.time(), '%I:%M %p, %b. %d, %Y')`*
+
+<!-- Contact info: leave author/reporter/editor contact info here -->
+*Firstname Lastname (<email@domain.com>)*
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE
+  )
+
+knitr::opts_knit$set(
+  root.dir = rprojroot::find_rstudio_root_file()
+  )
+```
+```{r initialize}
+# Load files, environment variables, libraries, etc. here
+library(tidyverse)
+library(apstyle)
+library(readxl)
+library(dplyr)  
+
+```
+
+## Overview
+
+```{r}
+#load data
+excel_files <- list.files(path = "~/Documents/campuscrimeproject/data", pattern = "\\.xlsx$", full.names = TRUE)
+unccrime <- purrr::map_dfr(excel_files, read_excel)
+
+#clean data
+#look at lubridate
+cleanunccrime <- unccrime  %>% 
+  separate('Event Date', into = c("Event Start Date", "Event End Date"), sep = " - ", convert = TRUE) %>%
+  separate('Event Start Date', into = c("Event Start Date", "Event Start Time"), sep = " ", convert = TRUE) %>%
+  separate('Event End Date', into = c("Event End Date", "Event End Time"), sep = " ", convert = TRUE) %>%
+  separate('Date Reported', into = c("Date Reported", "Time Reported"), sep = " ", convert = TRUE) %>%
+  separate('Event Start Date', into = c("Event Start Month", "Event Start Date", "Event Start Year"), sep = "/", convert = TRUE) %>%
+ separate('Event End Date', into = c("Event End Month", "Event End Date", "Event End Year"), sep = "/", convert = TRUE) %>%
+ separate('Date Reported', into = c("Month Reported", "Date Reported", "Year Reported"), sep = "/", convert = TRUE)
+```
+
+
+Q1: How have the number of crimes in the past year changed?
+```{r}
+#may 2023 vs may 2022
+may2022 <- cleanunccrime %>%
+  filter(`Event Start Year` == 2022, `Event Start Month` == 5) %>%
+  group_by(`Event Start Month`, `Event Start Date`) %>%
+  summarize(number_of_crimes = n())
+
+plot2022 <- ggplot(may2022, aes(x = `Event Start Date`, y = number_of_crimes)) +
+  geom_line()
+plot2022
+```
+
+Q2: What is the overall trend of accidents in Chapel Hill over the past year, and are there any particular locations or intersections that have consistently recorded a higher number of accidents?
+```{r}
+#franklin vs columbia/other main unc streets
+ch_accidents22 <- cleanunccrime %>%
+  filter(`Event Start Year` == 2022, Type == "Accident")
+
+ch_accidents23 <- cleanunccrime %>%
+  filter(`Event Start Year` == 2023, Type == "Accident")
+```
+
+Q3:How promptly are the Chapel Hill Police Department officers responding to accident reports, as shown by the time difference between the event and reporting dates?
+```{r}
+#gap bw end of incident and report date
+
+```
+
+
+## References
+
+<!-- This section is for including references to related material -->
+
+- CREDO National Charter School Study 2013: http://credo.stanford.edu/documents/NCSS%202013%20Final%20Draft.pdf
+
+- NBER Working Paper No. 23947: The Labor Market Effects of Offshoring by U.S. Multinational Firms: Evidence from Changes in Global Tax Policies: http://www.nber.org/papers/w23947
+
+<!-- This section is for a tests code block -->
+
+```{r tests}
+# Leave this block of code at the end of the file
+# If a test fails it will stop the Rmd document from knitting
+# Run tests like so:
+# source("tests/etl_test.R")
+```
