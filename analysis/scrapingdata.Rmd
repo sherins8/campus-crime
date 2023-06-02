@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "UNC Campus Crime"
 date: "MM/DD/YYYY"
 output:
   html_document:
@@ -60,28 +60,26 @@ Q1: How have the number of crimes in the past year changed?
 #may 2023 vs may 2022
 
 may2022 <- unccrime %>%
-  mutate(event_start_date = as.Date(event_start_date)) %>%
+  mutate(event_start_date = mdy_hms(event_start_date)) %>%
   filter(year(event_start_date) == 2022, month(event_start_date) == 5) %>%
-  group_by(event_start_date) %>%
-  summarize(number_of_crimes = n()) %>%
-  mutate(event_start_date = format(event_start_date, "%m-%d")) %>%
-  clean_names()
+  group_by(day = date(event_start_date)) %>%
+  summarize(number_of_crimes = n())  
 
 may2023 <- unccrime %>%
-  mutate(event_start_date = as.Date(event_start_date)) %>%
+  mutate(event_start_date = mdy_hms(event_start_date)) %>%
   filter(year(event_start_date) == 2023, month(event_start_date) == 5) %>%
-  group_by(event_start_date) %>%
-  summarize(number_of_crimes = n()) %>%
-  mutate(event_start_date = format(event_start_date, "%m-%d")) %>%
-  clean_names()
+  group_by(day = date(event_start_date)) %>%
+  summarize(number_of_crimes = n())  
 
 maycrime <- ggplot() +
-  geom_line(data = may2022, aes(x = event_start_date, y = number_of_crimes, color = "blue")) +
-  geom_line(data = may2023, aes(x = event_start_date, y = number_of_crimes, color = "green")) +
-  labs(x = "Date", y = "# of Crimes", title = "Chapel Hill May Crime Trends") +
+  geom_line(data = may2022, aes(x = day(day), y = number_of_crimes, color = "blue")) +
+  geom_line(data = may2023, aes(x = day(day), y = number_of_crimes, color = "green")) +
+  labs(x = "Dates in May", y = "# of Crimes", title = "Chapel Hill May Crime Trends") +
+  scale_x_continuous(breaks = seq(1, 31, by = 1)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_color_manual(values = c("blue", "green"), labels = c("2022", "2023")) +
-  theme_ap(family = "")
+  theme_ap(family = "") +
+  theme(legend.position = "right")
 maycrime
 
 ```
@@ -90,13 +88,17 @@ Q2: Have there been more accidents on Franklin Street over the past year?
 ```{r}
 #are there more accidents on a certain part of franklin st
 franklin_accidents <- unccrime %>%
-  filter(year(event_start_date) == 2023, month(event_start_date) == 5, str_detect(location, fixed("franklin", ignore_case = TRUE)))
+  mutate(event_start_date = mdy_hms(event_start_date)) %>%
+  filter(year(event_start_date) == 2022, month(event_start_date) == 5, str_detect(location, fixed("FRANKLIN", ignore_case = TRUE)))
+
 
 franklingeocode <- franklin_accidents %>%
   geocode(location, method = 'arcgis', lat = latitude , long = longitude, full_results = TRUE)
 
 franklin_accidents22 <- unccrime %>%
-  filter(year(event_start_date) == 2022, month(event_start_date) == 5, str_detect(location, fixed("franklin", ignore_case = TRUE)))
+  mutate(event_start_date = mdy_hms(event_start_date)) %>%
+  filter(year(event_start_date) == 2023, month(event_start_date) == 5, str_detect(location, fixed("FRANKLIN", ignore_case = TRUE)))
+
 
 franklingeocode22 <- franklin_accidents22 %>%
   geocode(location, method = 'arcgis', lat = latitude , long = longitude, full_results = TRUE)
@@ -107,12 +109,14 @@ leaflet() %>%
     addCircleMarkers(data = franklingeocode, color = "blue") %>%
     addCircleMarkers(data = franklingeocode22, color = "green")
 
+#clusters
+
 ```
 
 Q3: Is there a gap between the end of each incident and the report date for any of these cases?
 ```{r}
 gap_in_data <- unccrime %>%
-  mutate(gap_days = as.numeric(difftime(date_reported, event_end_date, units = "days")),
+  mutate(gap_days = difftime(mdy_hms(date_reported), mdy_hms(event_end_date), units = "days"),
          gap_in_data = gap_days > 0) %>%
   select(event_end_date, date_reported, gap_in_data)
 
@@ -123,11 +127,15 @@ num_cases_with_gaps <- nrow(cases_with_gaps)
 num_cases_with_gaps
 
 #calculate average time between event end date and date reported
-time_diff <- unccrime %>%
-  mutate(time_between = as.numeric(difftime(date_reported, event_end_date, units = "days"))) %>%
-  pull(time_between)
+
+
 average_time <- mean(time_diff, na.rm = TRUE)
 average_time
+
+gap_greater_average <- unccrime %>%
+  mutate(time_between = difftime(mdy_hms(date_reported), mdy_hms(event_end_date), units = "days")) %>%
+  filter(time_between > average_time)
+gap_greater_average
 
 ```
 
